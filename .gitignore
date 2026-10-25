@@ -1,0 +1,10 @@
+*.backup
+*.rsc.backup
+export.rsc
+local/*
+!local/.gitkeep
+!local/private.example.rsc
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
