@@ -22,6 +22,7 @@
 
 # --- WAN (Vivo PPPoE) ---
 :local lWANInterface "ether1"
+:local lVivoVLAN 10
 :local lPPPoEUser "cliente@cliente"
 :local lPPPoEPassword "your-pppoe-password"
 
@@ -82,6 +83,7 @@
 
 :do { /ip address remove [find where !dynamic] } on-error={}
 :do { /interface pppoe-client remove [find] } on-error={}
+:do { /interface vlan remove [find] } on-error={}
 :do { /interface list member remove [find] } on-error={}
 :do { /interface bridge port remove [find] } on-error={}
 # Remove bridges (nossa + defconf do factory reset)
@@ -96,7 +98,9 @@
 /interface ethernet
 set [find default-name=ether1] comment="Vivo"
 set [find default-name=ether2] comment="Switch"
-set [find default-name=ether3] comment="Mesh - AX300"
+set [find default-name=ether3] comment="Wi-Fi 1 - AX3000T"
+set [find default-name=ether4] comment="livre"
+# ether5 (nome pessoal do desktop) fica em local/private.rsc
 
 /interface list
 :do { remove [find name="WAN"] } on-error={}
@@ -104,17 +108,27 @@ add name=WAN comment="WAN Interfaces"
 :do { remove [find name="LAN"] } on-error={}
 add name=LAN comment="LAN Interfaces"
 
+# protocol-mode=rstp: bloqueia loops (ex: mesh Xiaomi fechando caminho pelo ar).
 /interface bridge
-add name=$lLANInterface comment="LAN Bridge"
+add name=$lLANInterface protocol-mode=rstp comment="LAN Bridge"
 
 /interface bridge port
 add bridge=$lLANInterface interface=ether3 comment="LAN Port 1"
 add bridge=$lLANInterface interface=ether4 comment="LAN Port 2"
 add bridge=$lLANInterface interface=ether5 comment="LAN Port 3"
-add bridge=$lLANInterface interface=ether2 comment="LAN Port 4 (ex-WAN2)"
+# priority=0x10: forca o caminho cabeado do switch a vencer no RSTP mesmo se os
+# cabos trocarem de porta, evitando que o trafego va pelo mesh sem fio.
+add bridge=$lLANInterface interface=ether2 priority=0x10 comment="LAN Port 4 (ex-WAN2)"
 
+# VLAN 10 da Vivo sobre a ether1: o modem em bridge entrega o PPPoE com a tag 10
+# (porta LAN1 do modem em "Tagged Only"). PPPoE direto na ether1 nao conecta.
+/interface vlan
+add name=vlan10-vivo interface=$lWANInterface vlan-id=$lVivoVLAN comment="Vivo WAN VLAN"
+
+# PPPoE roda sobre a VLAN, nao na ether1. MTU/MRU 1492 (8 bytes de overhead PPPoE).
+# use-peer-dns=no: o DNS da rede e o Pi-Hole, nao o da Vivo.
 /interface pppoe-client
-add name=pppoe-vivo interface=$lWANInterface user=$lPPPoEUser password=$lPPPoEPassword add-default-route=yes disabled=no comment="PPPoE: Vivo"
+add name=pppoe-vivo interface=vlan10-vivo user=$lPPPoEUser password=$lPPPoEPassword add-default-route=yes max-mtu=1492 max-mru=1492 use-peer-dns=no disabled=no comment="PPPoE: Vivo"
 
 /interface list member
 add list=LAN interface=$lLANInterface comment="LAN Bridge"

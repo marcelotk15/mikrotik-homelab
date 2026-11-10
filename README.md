@@ -5,8 +5,9 @@ Config do hEX (RB750Gr3, RouterOS 7.23.1) em forma de script `.rsc`, no estilo d
 
 ## O que tem
 
-- **WAN única Vivo** via PPPoE na `ether1` (MSS clamp v4/v6)
+- **WAN única Vivo** via PPPoE sobre a VLAN 10 (`vlan10-vivo` na `ether1`), MTU/MRU 1492 e MSS clamp v4/v6
 - **LAN** `192.168.100.0/24` na `bridge-lan` (ether2-5), DHCP com leases estáticos e domínio `internal`
+- **Bridge em RSTP** com prioridade na `ether2` (switch): o caminho cabeado sempre vence, evitando loop quando o mesh Xiaomi fecha caminho pelo ar. Portas: `ether2` switch, `ether3` Wi-Fi 1 (AX3000T), `ether5` desktop, `ether4` livre
 - **Homelab** `192.168.200.0/24` na mesma bridge
 - **DNS**: router encaminha pro Pi-Hole (`192.168.100.2`), netwatch troca pra 1.1.1.1/8.8.8.8 se ele cair
 - **IPv6**: prefix delegation da Vivo + ULA `fd64:1e57:9364:1::/64`, firewall v6 completo
@@ -29,7 +30,7 @@ Tudo em `local/` é gitignored, exceto o exemplo. Lá ficam MACs, nomes de pesso
 | Arquivo | No git? | O que é |
 |---------|---------|---------|
 | `local/private.example.rsc` | sim | Modelo com dados falsos |
-| `local/private.rsc` | não | Leases estáticos reais (MAC → IP) e comentário da `ether4` |
+| `local/private.rsc` | não | Leases estáticos reais (MAC → IP) e comentário da `ether5` |
 | `local/auto-before-reset.backup` | não | Backup binário antigo (ver abaixo) |
 
 Pra criar o seu:
